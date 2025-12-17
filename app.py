@@ -5,7 +5,7 @@ import streamlit as st # UI
 from groq import Groq # AI interface and Llama model responses
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.pipeline import Pipeline
-from sklearn.naive_bayes import MultinomialNB
+from sklearn.ensemble import RandomForestClassifier
 
 # retrieve api key details from secret file
 api_key = st.secrets["API_KEY"]
@@ -22,7 +22,7 @@ y = df["Intent"]
 # create a pipeline for tfidf vectorizer and naive bayes 
 pipeline = Pipeline([
     ("tfidf",TfidfVectorizer()), 
-    ("clf",MultinomialNB())
+    ("clf",RandomForestClassifier(n_estimators=100,max_depth=5))
     ])
 
 pipeline.fit(x,y)
@@ -35,18 +35,21 @@ responses2 = {
     "Order_Status": "Your order is being processed. Check your email for updates."
 }
 
-# create a function which predicts intent predictions
-def predict_intent(userip):
-    return pipeline.predict([userip])[0]
+
+def predict_intent_with_confidence(user_input):
+    # Get predicted probabilities for all classes
+    probs = pipeline.predict_proba([user_input])[0]
+    max_prob = max(probs)
+    predicted_intent = pipeline.classes_[probs.argmax()]
+    return predicted_intent, max_prob
 
 # create a function which takes the text ip and checks if the intent is present in the responses file.
 # If its present, then return the response operation
 # If it is not present, then return the llama model response
 def chabot_response(text):
-    intent = predict_intent(text)
-    
+    intent,confidence = predict_intent_with_confidence(text)
 
-    if intent in responses2:
+    if intent in responses2 and confidence>0.3:
         return responses2[intent]
     
     else:
@@ -73,7 +76,6 @@ def llama_response(text):
         response = chunk.choices[0].delta.content
         if response is not None:
             yield response
-
 
 # start building the streamlit app
 st.title("Llama Chatbot")
