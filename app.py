@@ -21,7 +21,7 @@ y = df["Intent"]
 
 # create a pipeline for tfidf vectorizer and naive bayes 
 pipeline = Pipeline([
-    ("tfidf",TfidfVectorizer()),
+    ("tfidf",TfidfVectorizer()), 
     ("clf",MultinomialNB())
     ])
 
